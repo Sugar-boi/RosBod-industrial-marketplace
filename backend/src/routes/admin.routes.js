@@ -17,6 +17,7 @@ const {
     getAllBids,
     rejectListing,
 } = require("../controllers/admin.controller");
+
 router.use(authMiddleware, allowRoles("ADMIN"));
 
 router.get("/pending-sellers", getPendingSellers);

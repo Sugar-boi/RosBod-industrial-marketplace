@@ -4,6 +4,14 @@ const upload = require(
     "../middleware/upload.middleware"
 );
 
+const authMiddleware = require(
+    "../middleware/auth.middleware"
+);
+
+const allowRoles = require(
+    "../middleware/role.middleware"
+);
+
 const {
     uploadImages,
 } = require(
@@ -14,6 +22,8 @@ const router = express.Router();
 
 router.post(
     "/",
+    authMiddleware,
+    allowRoles("SELLER", "ADMIN"),
     upload.array("images", 10),
     uploadImages
 );

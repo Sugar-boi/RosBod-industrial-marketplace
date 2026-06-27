@@ -7,48 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model auction {
+model Auction {
   id          Int      @id @default(autoincrement())
   listingId   Int      @unique(map: "Auction_listingId_key")
   startingBid Float
   currentBid  Float
   endDate     DateTime
-  listing     listing  @relation(fields: [listingId], references: [id], map: "Auction_listingId_fkey")
-  bid         bid[]
+  listing     Listing  @relation(fields: [listingId], references: [id], map: "Auction_listingId_fkey")
+  bids        Bid[]
 }
 
-model bid {
+model Bid {
   id        Int      @id @default(autoincrement())
   amount    Float
   auctionId Int
   userId    Int
   createdAt DateTime @default(now())
-  auction   auction  @relation(fields: [auctionId], references: [id], map: "Bid_auctionId_fkey")
-  user      user     @relation(fields: [userId], references: [id], map: "Bid_bidderId_fkey")
+  auction   Auction  @relation(fields: [auctionId], references: [id], map: "Bid_auctionId_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "Bid_bidderId_fkey")
 
   @@index([auctionId], map: "Bid_auctionId_fkey")
   @@index([userId], map: "Bid_bidderId_fkey")
 }
 
-model category {
-  id      Int       @id @default(autoincrement())
-  name    String
-  listing listing[]
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  listings Listing[]
 }
 
-model favorite {
+model Favorite {
   id        Int      @id @default(autoincrement())
   userId    Int
   listingId Int
   createdAt DateTime @default(now())
-  listing   listing  @relation(fields: [listingId], references: [id], map: "Favorite_listingId_fkey")
-  user      user     @relation(fields: [userId], references: [id], map: "Favorite_userId_fkey")
+  listing   Listing  @relation(fields: [listingId], references: [id], map: "Favorite_listingId_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "Favorite_userId_fkey")
 
   @@unique([userId, listingId], map: "Favorite_userId_listingId_key")
   @@index([listingId], map: "Favorite_listingId_fkey")
 }
 
-model listing {
+model Listing {
   id           Int            @id @default(autoincrement())
   title        String
   description  String
@@ -56,48 +56,61 @@ model listing {
   isAuction    Boolean        @default(false)
   sellerId     Int
   categoryId   Int
+  status       String         @default("PENDING")
+  rejectReason String?
   isApproved   Boolean        @default(false)
   createdAt    DateTime       @default(now())
-  auction      auction?
-  favorite     favorite[]
-  category     category       @relation(fields: [categoryId], references: [id], map: "Listing_categoryId_fkey")
-  user         user           @relation(fields: [sellerId], references: [id], map: "Listing_sellerId_fkey")
-  listingimage listingimage[]
+  auction      Auction?
+  favorites    Favorite[]
+  category     Category       @relation(fields: [categoryId], references: [id], map: "Listing_categoryId_fkey")
+  seller       User           @relation(fields: [sellerId], references: [id], map: "Listing_sellerId_fkey")
+  images       ListingImage[]
 
   @@index([categoryId], map: "Listing_categoryId_fkey")
   @@index([sellerId], map: "Listing_sellerId_fkey")
 }
 
-model listingimage {
+model ListingImage {
   id        Int     @id @default(autoincrement())
   imageUrl  String
   listingId Int
-  listing   listing @relation(fields: [listingId], references: [id], map: "ListingImage_listingId_fkey")
+  listing   Listing @relation(fields: [listingId], references: [id], map: "ListingImage_listingId_fkey")
 
   @@index([listingId], map: "ListingImage_listingId_fkey")
 }
 
-model user {
-  id               Int        @id @default(autoincrement())
+model User {
+  id               Int            @id @default(autoincrement())
   name             String
-  email            String     @unique(map: "User_email_key")
+  email            String         @unique(map: "User_email_key")
   password         String
-  role             user_role  @default(BUYER)
-  isApproved       Boolean    @default(false)
-  createdAt        DateTime   @default(now())
+  role             UserRole       @default(BUYER)
+  isApproved       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
   phone            String?
   whatsapp         String?
-  isEmailVerified  Boolean    @default(false)
+  isEmailVerified  Boolean        @default(false)
   verificationCode String?
   about            String?
   companyName      String?
   location         String?
-  bid              bid[]
-  favorite         favorite[]
-  listing          listing[]
+  bids             Bid[]
+  favorites        Favorite[]
+  listings         Listing[]
+  notifications    Notification[]
 }
 
-enum user_role {
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum UserRole {
   ADMIN
   SELLER
   BUYER

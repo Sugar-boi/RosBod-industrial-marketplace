@@ -24,6 +24,24 @@ const createListing = async (req, res) => {
             images,
             categoryId,
             isAuction,
+
+             manufacturer,
+    model,
+    year,
+    hoursWorked,
+    mechanicalCondition,
+    hydraulicCondition,
+
+    propertyType,
+    bedrooms,
+    bathrooms,
+    plotSize,
+    titleDocument,
+
+    quarryType,
+    reserveEstimate,
+    productionCapacity,
+    miningLicense,
         } = req.body;
 
         console.log("REQ BODY:", req.body);
@@ -50,6 +68,80 @@ const createListing = async (req, res) => {
                 images: true,
             },
         });
+
+        const category = await prisma.category.findUnique({
+    where: {
+        id: Number(categoryId),
+    },
+});
+if (
+    category &&
+    [33, 34, 35, 36, 37, 38, 39].includes(
+        category.id
+    )
+) {
+    await prisma.equipmentDetails.create({
+        data: {
+            listingId: listing.id,
+            manufacturer,
+            model,
+            year,
+            hoursWorked,
+            mechanicalCondition,
+            hydraulicCondition,
+        },
+    });
+}
+if (
+    category &&
+    [18,19,20,21,22,23,24,25,26].includes(
+        category.id
+    )
+) {
+    await prisma.propertyDetails.create({
+        data: {
+            listingId: listing.id,
+            propertyType,
+            bedrooms,
+            bathrooms,
+            plotSize,
+            titleDocument,
+        },
+    });
+}
+if (
+    category &&
+    [27,28,29,30,31,32].includes(
+        category.id
+    )
+) {
+    await prisma.quarryDetails.create({
+        data: {
+            listingId: listing.id,
+            quarryType,
+            reserveEstimate,
+            productionCapacity,
+            miningLicense,
+        },
+    });
+}
+
+        const admins =
+    await prisma.user.findMany({
+        where: {
+            role: "ADMIN",
+        },
+    });
+
+for (const admin of admins) {
+   await prisma.notification.create({
+    data: {
+        userId: admin.id,
+        message: `${listing.title} is awaiting approval`,
+    },
+});
+}
+
 
         if (isAuction) {
             await prisma.auction.create({
@@ -174,6 +266,11 @@ const getListingById = async (req, res) => {
                 seller: true,
                 category: true,
                 images: true,
+
+                equipmentDetails: true,
+    propertyDetails: true,
+    quarryDetails: true,
+
                 auction: {
                     include: {
                         bids: true,

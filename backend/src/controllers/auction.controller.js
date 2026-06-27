@@ -37,7 +37,7 @@ const placeBid = async (req, res) => {
             data: {
                 amount,
                 auctionId,
-                bidderId,
+                userId: bidderId,
             },
         });
 

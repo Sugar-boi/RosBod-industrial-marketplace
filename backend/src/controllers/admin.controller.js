@@ -45,14 +45,12 @@ const approveSeller = async (req, res) => {
         });
     }
 };
-const getPendingListings = async (
-    req,
-    res
-) => {
+const getPendingListings = async ( req, res ) => {
     try {
         const listings =
             await prisma.listing.findMany({
                 where: {
+                    status: "PENDING",
                     isApproved: false,
                 },
                 include: {
@@ -94,24 +92,30 @@ const getAllUsers = async (req, res) => {
     }
 };
 
-const approveListing = async (
-    req,
-    res
-) => {
+const approveListing = async ( req, res) => {
     try {
         const listingId = Number(
             req.params.id
         );
 
-        const listing =
-            await prisma.listing.update({
-                where: {
-                    id: listingId,
-                },
-                data: {
-                    isApproved: true,
-                },
-            });
+       const listing =
+    await prisma.listing.update({
+        where: {
+            id: listingId,
+        },
+        data: {
+            isApproved: true,
+            status: "APPROVED",
+        },
+    });
+
+await prisma.notification.create({
+    data: {
+        userId: listing.sellerId,
+        // title: "Listing Approved",
+        message: `${listing.title} has been approved`,
+    },
+});
 
         res.json({
             message:
@@ -263,7 +267,7 @@ const getAllBids = async (
         const bids =
             await prisma.bid.findMany({
                 include: {
-                    bidder: true,
+                    user: true,
                     auction: {
                         include: {
                             listing: true,
@@ -289,15 +293,32 @@ const rejectListing = async (req, res) => {
     try {
         const listingId = Number(req.params.id);
 
-        await prisma.listing.delete({
-            where: {
-                id: listingId,
-            },
-        });
+        const { rejectReason } = req.body;
+
+        const listing =
+            await prisma.listing.update({
+                where: {
+                    id: listingId,
+                },
+                data: {
+                    status: "REJECTED",
+                    rejectReason,
+                    isApproved: false,
+                },
+            });
+            await prisma.notification.create({
+    data: {
+        userId: listing.sellerId,
+        // title: "Listing Rejected",
+        message: `${listing.title} was rejected. Reason: ${rejectReason}`,
+    },
+});
 
         res.json({
             message: "Listing rejected",
+            listing,
         });
+
     } catch (error) {
         console.error(error);
 
