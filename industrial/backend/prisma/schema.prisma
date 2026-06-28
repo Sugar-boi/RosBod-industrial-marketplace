@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Auction {
+  id          Int      @id @default(autoincrement())
+  listingId   Int      @unique(map: "Auction_listingId_key")
+  startingBid Float
+  currentBid  Float
+  endDate     DateTime
+  listing     Listing  @relation(fields: [listingId], references: [id], map: "Auction_listingId_fkey")
+  bids        Bid[]
+}
+
+model Bid {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  auctionId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], map: "Bid_auctionId_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "Bid_bidderId_fkey")
+
+  @@index([auctionId], map: "Bid_auctionId_fkey")
+  @@index([userId], map: "Bid_bidderId_fkey")
+}
+
+model Category {
+  id       Int        @id @default(autoincrement())
+  name     String
+  parentId Int?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  listings Listing[]
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  listingId Int
+  createdAt DateTime @default(now())
+  listing   Listing  @relation(fields: [listingId], references: [id], map: "Favorite_listingId_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "Favorite_userId_fkey")
+
+  @@unique([userId, listingId], map: "Favorite_userId_listingId_key")
+  @@index([listingId], map: "Favorite_listingId_fkey")
+}
+
+model Listing {
+  id           Int            @id @default(autoincrement())
+  title        String
+  description  String
+  price        Float
+  isAuction    Boolean        @default(false)
+  sellerId     Int
+  categoryId   Int
+  status       String         @default("PENDING")
+  rejectReason String?
+  isApproved   Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  auction      Auction?
+  favorites    Favorite[]
+  category     Category       @relation(fields: [categoryId], references: [id], map: "Listing_categoryId_fkey")
+  seller       User           @relation(fields: [sellerId], references: [id], map: "Listing_sellerId_fkey")
+  images       ListingImage[]
+
+  equipmentDetails EquipmentDetails?
+  propertyDetails PropertyDetails?
+  quarryDetails QuarryDetails?
+
+  @@index([categoryId], map: "Listing_categoryId_fkey")
+  @@index([sellerId], map: "Listing_sellerId_fkey")
+}
+
+model ListingImage {
+  id        Int     @id @default(autoincrement())
+  imageUrl  String
+  listingId Int
+  listing   Listing @relation(fields: [listingId], references: [id], map: "ListingImage_listingId_fkey")
+
+  @@index([listingId], map: "ListingImage_listingId_fkey")
+}
+
+model User {
+  id               Int            @id @default(autoincrement())
+  name             String
+  email            String         @unique(map: "User_email_key")
+  password         String
+  role             UserRole       @default(BUYER)
+  isApproved       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  phone            String?
+  whatsapp         String?
+  isEmailVerified  Boolean        @default(false)
+  verificationCode String?
+  about            String?
+  companyName      String?
+  location         String?
+  bids             Bid[]
+  favorites        Favorite[]
+  listings         Listing[]
+  notifications    Notification[]
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model EquipmentDetails {
+  id Int @id @default(autoincrement())
+  listingId Int @unique
+  manufacturer String?
+  model String?
+  year Int?
+  hoursWorked Int?
+
+  mechanicalCondition String?
+  hydraulicCondition String?
+
+  listing Listing @relation(fields:[listingId], references:[id])
+}
+
+model PropertyDetails {
+  id Int @id @default(autoincrement())
+
+  listingId Int @unique
+
+  propertyType String?
+
+  bedrooms Int?
+  bathrooms Int?
+
+  plotSize Float?
+
+  titleDocument String?
+
+  listing Listing @relation(fields:[listingId], references:[id])
+}
+
+model QuarryDetails {
+  id Int @id @default(autoincrement())
+
+  listingId Int @unique
+
+  quarryType String?
+
+  reserveEstimate Float?
+
+  productionCapacity String?
+
+  miningLicense String?
+
+  listing Listing @relation(fields:[listingId], references:[id])
+}
+
+enum UserRole {
+  ADMIN
+  SELLER
+  BUYER
+}
