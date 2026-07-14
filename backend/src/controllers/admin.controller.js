@@ -45,7 +45,7 @@ const approveSeller = async (req, res) => {
         });
     }
 };
-const getPendingListings = async ( req, res ) => {
+const getPendingListings = async (req, res) => {
     try {
         const listings =
             await prisma.listing.findMany({
@@ -92,30 +92,31 @@ const getAllUsers = async (req, res) => {
     }
 };
 
-const approveListing = async ( req, res) => {
+const approveListing = async (req, res) => {
     try {
         const listingId = Number(
             req.params.id
         );
 
-       const listing =
-    await prisma.listing.update({
-        where: {
-            id: listingId,
-        },
-        data: {
-            isApproved: true,
-            status: "APPROVED",
-        },
-    });
+        const listing =
+            await prisma.listing.update({
+                where: {
+                    id: listingId,
+                },
+                data: {
+                    isApproved: true,
+                    status: "APPROVED",
+                },
+            });
 
-await prisma.notification.create({
-    data: {
-        userId: listing.sellerId,
-        // title: "Listing Approved",
-        message: `${listing.title} has been approved`,
-    },
-});
+        await prisma.notification.create({
+            data: {
+                userId: listing.sellerId,
+                listingId: listing.id,
+                message: `${listing.title} has been approved`,
+                type: "LISTING_APPROVED",
+            },
+        });
 
         res.json({
             message:
@@ -133,47 +134,75 @@ await prisma.notification.create({
 
 const getDashboardStats = async (req, res) => {
     try {
-        const totalUsers =
-            await prisma.user.count();
+        const totalUsers = await prisma.user.count();
 
-        const totalSellers =
-            await prisma.user.count({
-                where: {
-                    role: "SELLER",
+        const totalSellers = await prisma.user.count({
+            where: {
+                role: "SELLER",
+            },
+        });
+
+        const pendingSellers = await prisma.user.count({
+            where: {
+                role: "SELLER",
+                isApproved: false,
+            },
+        });
+
+        const totalListings = await prisma.listing.count();
+
+        const approvedListings = await prisma.listing.count({
+            where: {
+                status: "APPROVED",
+            },
+        });
+
+        const pendingListings = await prisma.listing.count({
+            where: {
+                status: "PENDING",
+            },
+        });
+
+        const rejectedListings = await prisma.listing.count({
+            where: {
+                status: "REJECTED",
+            },
+        });
+
+        const totalAuctions = await prisma.auction.count();
+
+        const activeAuctions = await prisma.auction.count({
+            where: {
+                endDate: {
+                    gt: new Date(),
                 },
-            });
+            },
+        });
 
-        const pendingSellers =
-            await prisma.user.count({
-                where: {
-                    role: "SELLER",
-                    isApproved: false,
+        const endedAuctions = await prisma.auction.count({
+            where: {
+                endDate: {
+                    lt: new Date(),
                 },
-            });
+            },
+        });
 
-        const pendingListings =
-            await prisma.listing.count({
-                where: {
-                    isApproved: false,
-                },
-            });
-
-        const totalListings =
-            await prisma.listing.count();
-
-        const totalAuctions =
-            await prisma.auction.count();
-
-        const totalBids =
-            await prisma.bid.count();
+        const totalBids = await prisma.bid.count();
 
         res.json({
             totalUsers,
             totalSellers,
             pendingSellers,
-            pendingListings,
+
             totalListings,
+            approvedListings,
+            pendingListings,
+            rejectedListings,
+
             totalAuctions,
+            activeAuctions,
+            endedAuctions,
+
             totalBids,
         });
     } catch (error) {
@@ -306,13 +335,14 @@ const rejectListing = async (req, res) => {
                     isApproved: false,
                 },
             });
-            await prisma.notification.create({
-    data: {
-        userId: listing.sellerId,
-        // title: "Listing Rejected",
-        message: `${listing.title} was rejected. Reason: ${rejectReason}`,
-    },
-});
+        await prisma.notification.create({
+            data: {
+                userId: listing.sellerId,
+                listingId: listing.id,
+                message: `${listing.title} was rejected. Reason: ${rejectReason}`,
+                type: "LISTING_REJECTED",
+            },
+        });
 
         res.json({
             message: "Listing rejected",

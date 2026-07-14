@@ -155,8 +155,10 @@ for (const admin of admins) {
                 },
             });
         }
-
+console.log("RETURNING LISTING:");
+console.log(listing);
         res.status(201).json(listing);
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({
@@ -266,32 +268,54 @@ const getListingById = async (req, res) => {
                 seller: true,
                 category: true,
                 images: true,
-
                 equipmentDetails: true,
-    propertyDetails: true,
-    quarryDetails: true,
-
+                propertyDetails: true,
+                quarryDetails: true,
                 auction: {
-                    include: {
-                        bids: true,
-                    },
+                    include: { bids: true },
                 },
             },
         });
 
-        if (!listing || !listing.isApproved) {
-            return res.status(404).json({
-                message: "Listing not found",
-            });
+        if (!listing) {
+            return res.status(404).json({ message: "Listing not found" });
         }
 
-        res.json(listing);
+        console.log("========== DEBUG ==========");
+console.log("Listing seller:", listing.sellerId);
+console.log("Approved:", listing.isApproved);
+
+console.log("REQ.USER:", req.user);
+const isOwner =
+    req.user &&
+    listing.sellerId === req.user.userId;
+
+const isAdmin =
+    req.user &&
+    req.user.role === "ADMIN";
+
+console.log("isOwner:", isOwner);
+console.log("isAdmin:", isAdmin);
+console.log("===========================");
+
+        // ✅ PUBLIC ACCESS RULE
+        if (listing.isApproved) {
+            return res.json(listing);
+        }
+
+        // ✅ PRIVATE ACCESS RULE (admin + owner)
+        if (isAdmin || isOwner) {
+            return res.json(listing);
+        }
+
+        // ❌ EVERYTHING ELSE
+      return res.status(403).json({
+  message: "Listing pending approval",
+});
+
     } catch (error) {
         console.error(error);
-
-        res.status(500).json({
-            message: "Server Error",
-        });
+        res.status(500).json({ message: "Server Error" });
     }
 };
 

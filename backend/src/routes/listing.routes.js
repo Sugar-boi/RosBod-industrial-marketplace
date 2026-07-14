@@ -1,4 +1,5 @@
 const authMiddleware = require("../middleware/auth.middleware");
+const optionalAuth = require("../middleware/optionalAuth.middleware");
 const prisma = require("../lib/prisma");
 const allowRoles = require("../middleware/role.middleware");
 const express = require("express");
@@ -15,12 +16,6 @@ router.post(
     "/",
     authMiddleware,
     allowRoles("ADMIN", "SELLER"),
-    // async (req, res, next) => {
-    //     if (req.user.role === "SELLER" && !req.user.isApproved) {
-    //         return res.status(403).json({ message: "Seller not approved" });
-    //     }
-    //     next();
-    // },
     createListing
 );
 router.put(
@@ -48,20 +43,28 @@ router.put(
     async (req, res) => {
         const listingId = Number(req.params.id);
 
-        await prisma.listing.delete({
+        const updated = await prisma.listing.update({
             where: {
                 id: listingId,
             },
+            data: {
+                status: "REJECTED",
+                isApproved: false,
+            },
         });
 
-        res.json({
-            message: "Listing rejected",
-        });
+        res.json(updated);
     }
 );
 
 router.get("/", getListings);
 
-router.get("/:id", getListingById);
+router.get(
+    "/:id",
+    optionalAuth,
+    getListingById
+);
+
+
 
 module.exports = router;

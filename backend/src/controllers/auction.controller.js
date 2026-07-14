@@ -3,9 +3,7 @@ const prisma = require("../lib/prisma");
 const placeBid = async (req, res) => {
     try {
         const auctionId = Number(req.params.id);
-
         const { amount } = req.body;
-
         const bidderId = req.user.userId;
 
         const auction =
@@ -13,6 +11,9 @@ const placeBid = async (req, res) => {
                 where: {
                     id: auctionId,
                 },
+                include: {
+                    listing: true,
+                }
             });
 
         if (!auction) {
@@ -33,6 +34,15 @@ const placeBid = async (req, res) => {
             });
         }
 
+        const previousHighestBid = await prisma.bid.findFirst({
+            where: {
+                auctionId,
+            },
+            orderBy: {
+                amount: "desc",
+            },
+        });
+
         const bid = await prisma.bid.create({
             data: {
                 amount,
@@ -43,17 +53,43 @@ const placeBid = async (req, res) => {
 
         await prisma.auction.update({
             where: {
-                id: auctionId,
+                id:auctionId,
             },
             data: {
                 currentBid: amount,
             },
         });
 
+        await prisma.notification.create({
+            data: {
+                userId: auction.listing.sellerId,
+                listingId: auction.listing.id,
+                auctionId: auction.id,
+                type: "NEW_BID",
+                message: `A new bid has been placed on "${auction.listing.title}".`,
+            },
+        });
+
+        if (
+            previousHighestBid &&
+            previousHighestBid.userId !== req.user.userId
+        ) {
+            await prisma.notification.create({
+                data: {
+                    userId: previousHighestBid.userId,
+                    listingId: auction.listing.id,
+                    auctionId: auction.id,
+                    type: "OUTBID",
+                    message: `You've been outbid on "${auction.listing.title}".`,
+                },
+            });
+        }
+        
+
         res.status(201).json(bid);
     } catch (error) {
         console.error(error);
-
+ 
         res.status(500).json({
             message: "Server Error",
         });

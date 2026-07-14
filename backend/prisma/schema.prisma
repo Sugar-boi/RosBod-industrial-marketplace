@@ -14,7 +14,11 @@ model Auction {
   currentBid  Float
   endDate     DateTime
   listing     Listing  @relation(fields: [listingId], references: [id], map: "Auction_listingId_fkey")
+  processed     Boolean  @default(false)
   bids        Bid[]
+  notifications Notification[]
+  createdAt DateTime @default(now())
+  
 }
 
 model Bid {
@@ -72,6 +76,7 @@ model Listing {
   equipmentDetails EquipmentDetails?
   propertyDetails PropertyDetails?
   quarryDetails QuarryDetails?
+  notifications Notification[]
 
   @@index([categoryId], map: "Listing_categoryId_fkey")
   @@index([sellerId], map: "Listing_sellerId_fkey")
@@ -108,13 +113,22 @@ model User {
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
+  message    String
+
+  type       String?
+
+  listingId  Int?
+  listing    Listing? @relation(fields: [listingId], references: [id])
+
+  auctionId  Int?
+ auction    Auction? @relation(fields: [auctionId], references: [id])
+  isRead     Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
 }
 
 model EquipmentDetails {

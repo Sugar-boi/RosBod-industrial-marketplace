@@ -19,7 +19,7 @@ const getSellerStats = async (
             await prisma.listing.count({
                 where: {
                     sellerId,
-                    isApproved: false,
+                   status: "PENDING",
                 },
             });
 
@@ -89,6 +89,10 @@ const getMyListingById = async (
                     category: true,
                     images: true,
                     auction: true,
+
+                     equipmentDetails: true,
+            propertyDetails: true,
+            quarryDetails: true,
                 },
             });
 
@@ -262,21 +266,115 @@ const updateMyListing = async (req, res) => {
             description,
             price,
             categoryId,
+        
+            images,
+            isAuction,
+        
+            manufacturer,
+            model,
+            year,
+            hoursWorked,
+        
+            bedrooms,
+            bathrooms,
+            plotSize,
+        
+            quarryType,
+            reserveEstimate,
         } = req.body;
 
-        const updatedListing =
-            await prisma.listing.update({
-                where: {
-                    id: listingId,
-                },
-                data: {
-                    title,
-                    description,
-                    price: Number(price),
-                    categoryId:
-                        Number(categoryId),
-                },
-            });
+        const data = {
+    title,
+    description,
+    price: Number(price),
+    categoryId: Number(categoryId),
+};
+
+if (manufacturer || model || year) {
+    await prisma.equipmentDetails.upsert({
+        where: {
+            listingId,
+        },
+        update: {
+            manufacturer,
+            model,
+            year,
+            hoursWorked,
+        },
+        create: {
+            listingId,
+            manufacturer,
+            model,
+            year,
+            hoursWorked,
+        },
+    });
+}
+
+if (bedrooms || bathrooms || plotSize) {
+    await prisma.propertyDetails.upsert({
+        where: {
+            listingId,
+        },
+        update: {
+            bedrooms,
+            bathrooms,
+            plotSize,
+        },
+        create: {
+            listingId,
+            bedrooms,
+            bathrooms,
+            plotSize,
+        },
+    });
+}
+
+if (quarryType || reserveEstimate) {
+    await prisma.quarryDetails.upsert({
+        where: {
+            listingId,
+        },
+        update: {
+            quarryType,
+            reserveEstimate,
+        },
+        create: {
+            listingId,
+            quarryType,
+            reserveEstimate,
+        },
+    });
+}
+
+if (listing.status === "REJECTED") {
+    data.status = "PENDING";
+    data.isApproved = false;
+    data.rejectReason = null;
+}
+
+const updatedListing = await prisma.listing.update({
+    where: {
+        id: listingId,
+    },
+    data: {
+        ...data,
+        isAuction,
+    },
+});
+await prisma.listingImage.deleteMany({
+    where: {
+        listingId,
+    },
+});
+if (images && images.length > 0) {
+    await prisma.listingImage.createMany({
+        data: images.map((url) => ({
+            listingId,
+            imageUrl: url,
+        })),
+    });
+}
 
         res.json(updatedListing);
     } catch (error) {
