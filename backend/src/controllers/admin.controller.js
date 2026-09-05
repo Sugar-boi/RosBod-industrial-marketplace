@@ -1,4 +1,34 @@
 const prisma = require("../lib/prisma");
+const { sendMail } = require("../lib/mail");
+const formatListing = (listing) => {
+    if (!listing) return listing;
+
+    const {
+        user,
+        listingimage,
+        ...rest
+    } = listing;
+
+    return {
+        ...rest,
+        seller: user,
+        images: listingimage || [],
+    };
+};
+
+const formatAuction = (auction) => {
+    if (!auction) return auction;
+
+    const {
+        bid,
+        ...rest
+    } = auction;
+
+    return {
+        ...rest,
+        bids: bid || [],
+    };
+};
 
 const getPendingSellers = async (
     req,
@@ -27,43 +57,73 @@ const approveSeller = async (req, res) => {
     try {
         const sellerId = Number(req.params.id);
 
-        const seller = await prisma.user.update({
-            where: {
-                id: sellerId,
-            },
-            data: {
-                isApproved: true,
-            },
+        const seller = await prisma.user.findUnique({
+            where: { id: sellerId },
         });
 
-        res.json(seller);
+        if (!seller) {
+            return res.status(404).json({
+                message: "Seller not found",
+            });
+        }
+
+        await prisma.user.update({
+            where: { id: sellerId },
+            data: { isApproved: true },
+        });
+
+        try {
+            await sendMail({
+                to: seller.email,
+                subject: "Your Rosebod seller account is approved",
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 480px;">
+                    <h2>You're approved${seller.name ? `, ${seller.name}` : ""}!</h2>
+                    <p>Your seller account on Rosebod has been approved.</p>
+                    <p>You can now create listings and auctions.</p>
+                    <p>
+                      <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/login">
+                        Sign in to get started
+                      </a>
+                    </p>
+                  </div>
+                `,
+            });
+        } catch (mailErr) {
+            console.error("Failed to send seller approval email:", mailErr);
+        }
+
+        res.json({
+            message: "Seller approved successfully",
+        });
     } catch (error) {
         console.error(error);
-
-        res.status(500).json({
-            message: "Server Error",
-        });
+        res.status(500).json({ message: "Server Error" });
     }
 };
 const getPendingListings = async (req, res) => {
     try {
         const listings =
             await prisma.listing.findMany({
+
                 where: {
-                    status: "PENDING",
-                    isApproved: false,
+                    OR: [
+                        { status: "PENDING" },
+                        { isApproved: false, status: { not: "REJECTED" } },
+                    ],
                 },
                 include: {
-                    seller: true,
+                    auction: true,
+                    user: true,
                     category: true,
-                    images: true,
+                    listingimage: true,
                 },
                 orderBy: {
                     createdAt: "desc"
                 }
             });
 
-        res.json(listings);
+        res.json(listings.map(formatListing));
     } catch (error) {
         console.error(error);
 
@@ -77,6 +137,19 @@ const getAllUsers = async (req, res) => {
     try {
         const users =
             await prisma.user.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    whatsapp: true,
+                    companyName: true,
+                    location: true,
+                    about: true,
+                    role: true,
+                    isApproved: true,
+                    createdAt: true,
+                },
                 orderBy: {
                     createdAt: "desc",
                 },
@@ -222,7 +295,7 @@ const getAllSellers = async (req, res) => {
                     role: "SELLER",
                 },
                 include: {
-                    listings: true,
+                    listing: true,
                 },
                 orderBy: {
                     createdAt: "desc",
@@ -239,26 +312,56 @@ const getAllSellers = async (req, res) => {
     }
 };
 
+// const getAllListings = async (req, res) => {
+//     try {
+//         const listings =
+//             await prisma.listing.findMany({
+//                 where: {
+//                     OR: [
+//                         { status: "PENDING" },
+//                         { isApproved: false, status: { not: "REJECTED" } },
+//                     ],
+//                 },
+//                 include: {
+//                     auction: true,
+//                     user: true,
+//                     category: true,
+//                     listingimage: true,
+//                 },
+//                 orderBy: {
+//                     createdAt: "desc",
+//                 },
+//             });
+
+//         res.json(listings.map(formatListing));
+//     } catch (error) {
+//         console.error(error);
+
+//         res.status(500).json({
+//             message: "Server Error",
+//         });
+//     }
+// };
+
 const getAllListings = async (req, res) => {
     try {
-        const listings =
-            await prisma.listing.findMany({
-                include: {
-                    seller: true,
-                    category: true,
-                    images: true,
-                },
-                orderBy: {
-                    createdAt: "desc",
-                },
-            });
+        const listings = await prisma.listing.findMany({
+            include: {
+                user: true,
+                category: true,
+                listingimage: true,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
 
-        res.json(listings);
+        res.json(listings.map(formatListing));
     } catch (error) {
-        console.error(error);
-
+        console.error("GET ALL LISTINGS ERROR:", error);
         res.status(500).json({
             message: "Server Error",
+            error: error.message,
         });
     }
 };
@@ -270,15 +373,21 @@ const getAllAuctions = async (
         const auctions =
             await prisma.auction.findMany({
                 include: {
-                    listing: true,
-                    bids: true,
+                    listing: {
+                        include: {
+                            listingimage: true,
+                            category: true,
+                            user: true,
+                        },
+                    },
+                    bid: true,
                 },
                 orderBy: {
                     endDate: "desc",
                 },
             });
 
-        res.json(auctions);
+        res.json(auctions.map(formatAuction));
     } catch (error) {
         console.error(error);
 

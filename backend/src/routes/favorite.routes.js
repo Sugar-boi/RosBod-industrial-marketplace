@@ -8,9 +8,22 @@ const auth =
 const {
     toggleFavorite,
     getMyFavorites,
+    checkFavorite,
 } = require(
     "../controllers/favorite.controller"
 );
+router.get(
+    "/my-favorites",
+    auth,
+    getMyFavorites
+);
+
+router.get(
+    "/:id/check",
+    auth,
+    checkFavorite
+);
+
 
 router.post(
     "/:id",
@@ -18,10 +31,5 @@ router.post(
     toggleFavorite
 );
 
-router.get(
-    "/my-favorites",
-    auth,
-    getMyFavorites
-);
 
 module.exports = router;

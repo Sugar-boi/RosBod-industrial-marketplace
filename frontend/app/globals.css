@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Hero carousel navigation */
+
+.rosebod-hero-swiper .swiper-button-next,
+.rosebod-hero-swiper .swiper-button-prev {
+  width: 46px;
+  height: 46px;
+
+  border-radius: 9999px;
+
+  background: rgba(0, 0, 0, 0.45);
+
+  color: white;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.rosebod-hero-swiper .swiper-button-next:hover,
+.rosebod-hero-swiper .swiper-button-prev:hover {
+  background: rgba(0, 0, 0, 0.7);
+
+  transform: scale(1.05);
+}
+
+.rosebod-hero-swiper .swiper-button-next::after,
+.rosebod-hero-swiper .swiper-button-prev::after {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Smaller arrows on phones */
+
+@media (max-width: 640px) {
+
+  .rosebod-hero-swiper .swiper-button-next,
+  .rosebod-hero-swiper .swiper-button-prev {
+    width: 30px;
+    height: 30px;
+  }
+
+  .rosebod-hero-swiper .swiper-button-next {
+    right: 8px;
+  }
+
+  .rosebod-hero-swiper .swiper-button-prev {
+    left: 8px;
+  }
+
+  .rosebod-hero-swiper .swiper-button-next::after,
+  .rosebod-hero-swiper .swiper-button-prev::after {
+    font-size: 12px;
+  }
+
+}
+
+html {
+  scroll-behavior: smooth;
+}

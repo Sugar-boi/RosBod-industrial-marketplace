@@ -4,6 +4,8 @@ const prisma = new PrismaClient();
 
 async function main() {
 
+    await prisma.category.deleteMany();
+
     const properties =
         await prisma.category.create({
             data: {
@@ -25,12 +27,13 @@ async function main() {
             },
         });
 
-    const auctions =
+        const spareParts =
         await prisma.category.create({
             data: {
-                name: "Auctions",
+                name: "Spare Parts",
             },
-        });
+        });        
+
 
     await prisma.category.createMany({
         data: [
@@ -59,11 +62,20 @@ async function main() {
             { name: "Generators", parentId: equipment.id },
             { name: "Dump Trucks", parentId: equipment.id },
             { name: "Forklifts", parentId: equipment.id },
-
-            { name: "Equipment Auctions", parentId: auctions.id },
-            { name: "Property Auctions", parentId: auctions.id },
-            { name: "Quarry Auctions", parentId: auctions.id },
-
+      
+            { name: "Excavator Parts", parentId: spareParts.id },
+            { name: "Bulldozer Parts", parentId: spareParts.id },
+            { name: "Crusher Parts", parentId: spareParts.id },
+            { name: "Generator Parts", parentId: spareParts.id },
+            { name: "Truck Parts", parentId: spareParts.id },
+            { name: "Loader Parts", parentId: spareParts.id },
+            { name: "Forklift Parts", parentId: spareParts.id },
+            { name: "Hydraulic Parts", parentId: spareParts.id },
+            { name: "Engine Parts", parentId: spareParts.id },
+            { name: "Undercarriage Parts", parentId: spareParts.id },
+            { name: "Filters & Lubricants", parentId: spareParts.id },
+            { name: "Tyres & Tracks", parentId: spareParts.id },
+            { name: "Other Parts", parentId: spareParts.id },
         ],
     });
 

@@ -13,7 +13,8 @@ const {
     updateMyListing,
     getMyProfile,
     updateMyProfile,
-    getMyAuctions
+    getMyAuctions,
+    getListingPerformance,
 } = require("../controllers/seller.controller");
 
 router.get(
@@ -32,6 +33,12 @@ router.get(
     authMiddleware,
     allowRoles("SELLER"),
     getMyProfile
+);
+router.get(
+    "/listing-performance",
+    authMiddleware,
+    allowRoles("SELLER"),
+    getListingPerformance
 );
 
 

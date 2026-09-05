@@ -10,6 +10,11 @@ const {
     createListing,
     getListings,
     getListingById,
+    getRelatedListings,
+    markListingSold,
+    getListingsByIds,
+    getMyListings,
+    recordListingView
 } = require("../controllers/listing.controller");
 
 router.post(
@@ -18,6 +23,12 @@ router.post(
     allowRoles("ADMIN", "SELLER"),
     createListing
 );
+
+router.post(
+    "/by-ids",
+    getListingsByIds
+);
+
 router.put(
     "/:id/approve",
     authMiddleware,
@@ -27,13 +38,19 @@ router.put(
 
         const updated = await prisma.listing.update({
             where: { id: listingId },
-           data: {
-    isApproved: true,
-    status: "APPROVED",
-}
+            data: {
+                isApproved: true,
+                status: "APPROVED",
+            }
         });
         res.json(updated);
     }
+);
+
+router.put(
+    "/:id/sold",
+    authMiddleware,
+    markListingSold
 );
 
 router.put(
@@ -56,8 +73,20 @@ router.put(
         res.json(updated);
     }
 );
+router.post("/:id/view", recordListingView);
 
 router.get("/", getListings);
+
+router.get(
+    "/my-listings",
+    authMiddleware,
+    getMyListings
+);
+
+router.get(
+    "/:id/related",
+    getRelatedListings
+);
 
 router.get(
     "/:id",

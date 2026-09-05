@@ -1,6 +1,7 @@
 const prisma = require("../lib/prisma");
 
 const getCategories = async (req, res) => {
+     console.log("GET CATEGORIES HIT");
     try {
         const categories = await prisma.category.findMany();
 
