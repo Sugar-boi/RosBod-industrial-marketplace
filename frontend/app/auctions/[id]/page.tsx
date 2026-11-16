@@ -27,6 +27,11 @@ export default function AuctionPage() {
   const [bidLoading, setBidLoading] =
     useState(false);
 
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
   const loadAuction = async () => {
     try {
       const res = await fetch(
@@ -80,69 +85,68 @@ export default function AuctionPage() {
 
   const handleBid = async () => {
     try {
-      const token =
-        localStorage.getItem(
-          "token"
-        );
+      setMessage(null);
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setMessage({
+          type: "error",
+          text: "Please sign in to place a bid.",
+        });
+        return;
+      }
 
       if (!bidAmount) {
-        alert(
-          "Enter your bid."
-        );
+        setMessage({
+          type: "error",
+          text: "Enter your bid amount.",
+        });
+        return;
+      }
 
+      const amount = Number(bidAmount);
+
+      if (Number.isNaN(amount) || amount < minimumBid) {
+        setMessage({
+          type: "error",
+          text: `Bid must be at least ₦${minimumBid.toLocaleString()}.`,
+        });
         return;
       }
 
       setBidLoading(true);
 
-      const res =
-        await fetch(
-          `${API_BASE_URL}/api/auctions/${id}/bid`,
-          {
-            method: "POST",
+      const res = await fetch(
+        `${API_BASE_URL}/api/auctions/${id}/bid`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ amount }),
+        }
+      );
 
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${token}`,
-            },
-
-            body:
-              JSON.stringify({
-                amount:
-                  Number(
-                    bidAmount
-                  ),
-              }),
-          }
-        );
-
-      const data =
-        await res.json();
+      const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(
-          data.message ||
-          "Failed to place bid"
-        );
+        throw new Error(data.message || "Failed to place bid");
       }
 
-      alert(
-        "Bid placed successfully!"
-      );
+      setMessage({
+        type: "success",
+        text: "Bid placed successfully.",
+      });
 
       setBidAmount("");
-
       await loadAuction();
-
     } catch (err: any) {
-      alert(
-        err.message ||
-        "Failed to place bid"
-      );
-
+      setMessage({
+        type: "error",
+        text: err.message || "Failed to place bid",
+      });
     } finally {
       setBidLoading(false);
     }
@@ -313,6 +317,26 @@ export default function AuctionPage() {
             {listing?.title}
           </span>
         </div>
+
+        {message && (
+          <div
+            className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-700"
+              }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p>{message.text}</p>
+              <button
+                type="button"
+                onClick={() => setMessage(null)}
+                className="shrink-0 font-bold opacity-70 hover:opacity-100"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* MOBILE/TABLET TITLE */}
 

@@ -99,6 +99,11 @@ export default function PendingListingsPage() {
     const [showRejectModal, setShowRejectModal] =
         useState(false);
 
+    const [message, setMessage] = useState<{
+        type: "success" | "error";
+        text: string;
+    } | null>(null);
+
     /* --------------------------------------------------
        FETCH PENDING LISTINGS
     -------------------------------------------------- */
@@ -324,14 +329,14 @@ export default function PendingListingsPage() {
                         getCategoryName(
                             listing
                         ) ===
-                            selectedCategory;
+                        selectedCategory;
 
                     const matchesSeller =
                         !selectedSeller ||
                         getSellerName(
                             listing
                         ) ===
-                            selectedSeller;
+                        selectedSeller;
 
                     const matchesDate =
                         !selectedDate ||
@@ -345,7 +350,7 @@ export default function PendingListingsPage() {
                                     0,
                                     10
                                 ) ===
-                                selectedDate
+                            selectedDate
                         );
 
                     return (
@@ -368,52 +373,42 @@ export default function PendingListingsPage() {
        APPROVE
     -------------------------------------------------- */
 
-    const approveListing = async (
-        id: number
-    ) => {
+    const approveListing = async (id: number) => {
         try {
-            const token =
-                localStorage.getItem(
-                    "token"
-                );
+            setMessage(null);
 
+            const token = localStorage.getItem("token");
             const res = await fetch(
                 `${API_BASE_URL}/api/admin/approve-listing/${id}`,
                 {
                     method: "PUT",
                     headers: {
-                        Authorization:
-                            `Bearer ${token}`,
+                        Authorization: `Bearer ${token}`,
                     },
                 }
             );
 
             if (!res.ok) {
-                const data =
-                    await res.json();
-
-                throw new Error(
-                    data.message ||
-                    "Failed to approve listing"
-                );
+                const data = await res.json();
+                throw new Error(data.message || "Failed to approve listing");
             }
 
-            setListings(
-                (current) =>
-                    current.filter(
-                        (listing) =>
-                            listing.id !== id
-                    )
+            setListings((current) =>
+                current.filter((listing) => listing.id !== id)
             );
+
+            setMessage({
+                type: "success",
+                text: "Listing approved successfully.",
+            });
 
             fetchStats();
         } catch (err: any) {
             console.error(err);
-
-            alert(
-                err.message ||
-                "Failed to approve listing"
-            );
+            setMessage({
+                type: "error",
+                text: err.message || "Failed to approve listing",
+            });
         }
     };
 
@@ -421,68 +416,48 @@ export default function PendingListingsPage() {
        REJECT
     -------------------------------------------------- */
 
-    const rejectListing = async (
-        reason: string
-    ) => {
-        if (
-            selectedListing === null
-        ) {
-            return;
-        }
+    const rejectListing = async (reason: string) => {
+        if (selectedListing === null) return;
 
         try {
-            const token =
-                localStorage.getItem(
-                    "token"
-                );
+            setMessage(null);
 
+            const token = localStorage.getItem("token");
             const res = await fetch(
                 `${API_BASE_URL}/api/admin/reject-listing/${selectedListing}`,
                 {
                     method: "PUT",
-
                     headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        Authorization:
-                            `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
-
                     body: JSON.stringify({
-                        rejectReason:
-                            reason,
+                        rejectReason: reason,
                     }),
                 }
             );
 
             if (!res.ok) {
-                const data =
-                    await res.json();
-
-                throw new Error(
-                    data.message ||
-                    "Failed to reject listing"
-                );
+                const data = await res.json();
+                throw new Error(data.message || "Failed to reject listing");
             }
 
-            setShowRejectModal(
-                false
-            );
+            setShowRejectModal(false);
+            setSelectedListing(null);
 
-            setSelectedListing(
-                null
-            );
+            setMessage({
+                type: "success",
+                text: "Listing rejected.",
+            });
 
             await fetchListings();
             await fetchStats();
         } catch (err: any) {
             console.error(err);
-
-            alert(
-                err.message ||
-                "Failed to reject listing"
-            );
+            setMessage({
+                type: "error",
+                text: err.message || "Failed to reject listing",
+            });
         }
     };
 
@@ -552,6 +527,25 @@ export default function PendingListingsPage() {
                     </p>
                 </div>
 
+                {message && (
+                    <div
+                        className={`mb-4 rounded-xl border px-4 py-3 text-sm ${message.type === "success"
+                            ? "border-green-200 bg-green-50 text-green-800"
+                            : "border-red-200 bg-red-50 text-red-700"
+                            }`}
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <p>{message.text}</p>
+                            <button
+                                type="button"
+                                onClick={() => setMessage(null)}
+                                className="shrink-0 font-bold opacity-70 hover:opacity-100"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {/* FILTER BAR */}
 
                 <section className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
@@ -741,22 +735,20 @@ export default function PendingListingsPage() {
                                         tab.key
                                     )
                                 }
-                                className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition sm:px-5 ${
-                                    activeTab ===
+                                className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition sm:px-5 ${activeTab ===
                                     tab.key
-                                        ? "border-[#ff9900] text-[#202226]"
-                                        : "border-transparent text-gray-500 hover:text-gray-800"
-                                }`}
+                                    ? "border-[#ff9900] text-[#202226]"
+                                    : "border-transparent text-gray-500 hover:text-gray-800"
+                                    }`}
                             >
                                 {tab.label}
 
                                 <span
-                                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
-                                        activeTab ===
+                                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${activeTab ===
                                         tab.key
-                                            ? "bg-orange-50 text-[#d97706]"
-                                            : "bg-gray-100 text-gray-500"
-                                    }`}
+                                        ? "bg-orange-50 text-[#d97706]"
+                                        : "bg-gray-100 text-gray-500"
+                                        }`}
                                 >
                                     {tab.count}
                                 </span>
@@ -805,7 +797,7 @@ export default function PendingListingsPage() {
                             {/* DESKTOP ROWS */}
 
                             {filteredListings.length ===
-                            0 ? (
+                                0 ? (
                                 <EmptyState />
                             ) : (
                                 filteredListings.map(
@@ -1131,7 +1123,7 @@ export default function PendingListingsPage() {
                     <div className="md:hidden">
 
                         {filteredListings.length ===
-                        0 ? (
+                            0 ? (
                             <EmptyState />
                         ) : (
                             <div className="divide-y divide-gray-100">
@@ -1301,7 +1293,7 @@ export default function PendingListingsPage() {
                         </span>{" "}
                         pending{" "}
                         {filteredListings.length ===
-                        1
+                            1
                             ? "listing"
                             : "listings"}
                     </p>

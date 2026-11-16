@@ -32,10 +32,10 @@ export default function ImageUploader({
         if (!files || files.length === 0) return;
 
         if (imageUrls.length + files.length > maxImages) {
-            alert(`Maximum ${maxImages} images allowed.`);
+            setError(`Maximum ${maxImages} images allowed.`);
             e.target.value = "";
             return;
-        }
+          }
 
         const token = localStorage.getItem("token");
         if (!token) {
@@ -58,7 +58,7 @@ export default function ImageUploader({
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    // Do NOT set Content-Type — browser sets the multipart boundary
+                   
                 },
                 body: formData,
             });

@@ -94,6 +94,8 @@ export default function CreateAuctionPage() {
     setInspectionDate,
   ] = useState("");
 
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
   // Terms
 
   const [
@@ -314,290 +316,160 @@ export default function CreateAuctionPage() {
 
   const saveDraft = () => {
     try {
+      setFormError(null);
+      setFormSuccess(null);
+
       const draft = {
         auctionMode,
-
-        // Existing listing
         listingId,
-
-        // New listing
         title,
         description,
         price,
         imageUrls,
         categoryId,
         parentCategoryId,
-
-        // Auction settings
         startingBid,
         reservePrice,
         buyNowPrice,
         minimumIncrement,
         startDate,
         endDate,
-
-        // Inspection
         inspectionState,
         inspectionCity,
         inspectionAddress,
         inspectionDate,
-
-        // Terms
         paymentTerms,
         terms,
-
-        savedAt:
-          new Date().toISOString(),
+        savedAt: new Date().toISOString(),
       };
 
-      localStorage.setItem(
-        DRAFT_KEY,
-        JSON.stringify(draft)
-      );
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 
-      alert(
-        "Your auction has been saved as a draft."
-      );
-
-      router.push("/dashboard");
-
+      setFormSuccess("Your auction has been saved as a draft.");
+      // optional: short delay then go dashboard
+      setTimeout(() => router.push("/dashboard"), 800);
     } catch (error) {
-      console.error(
-        "Failed to save auction draft:",
-        error
-      );
-
-      alert(
-        "Unable to save your draft. Please try again."
-      );
+      console.error("Failed to save auction draft:", error);
+      setFormError("Unable to save your draft. Please try again.");
     }
   };
 
   const handleSubmit = async () => {
-
     setFormError(null);
+    setFormSuccess(null);
 
     if (user?.role === "SELLER" && user?.isApproved === false) {
       setFormError(
-        "Your seller account is still pending approval. You can't create listings yet."
+        "Your seller account is still pending approval. You can't create an auction yet."
       );
-      return; // stop — do not call the API
+      return;
     }
+
     try {
-      const token =
-        localStorage.getItem("token");
+      const token = localStorage.getItem("token");
 
       if (!token) {
-        return alert(
-          "Please log in again."
-        );
+        setFormError("Please log in again.");
+        return;
       }
 
-      // Existing listing validation
-
-      if (
-        auctionMode === "existing" &&
-        !listingId
-      ) {
-        return alert(
-          "Please select a listing."
-        );
+      if (auctionMode === "existing" && !listingId) {
+        setFormError("Please select a listing.");
+        return;
       }
-
-      // New listing validation
 
       if (auctionMode === "new") {
-        if (
-          !title ||
-          !description ||
-          !price ||
-          !categoryId
-        ) {
-          return alert(
-            "Please complete all new listing details."
-          );
+        if (!title || !description || !price || !categoryId) {
+          setFormError("Please complete all new listing details.");
+          return;
         }
 
-        if (
-          imageUrls.length === 0
-        ) {
-          return alert(
-            "Please upload at least one image."
-          );
+        if (imageUrls.length === 0) {
+          setFormError("Please upload at least one image.");
+          return;
         }
       }
 
-      // Auction validation
-
       if (!startingBid) {
-        return alert(
-          "Enter a starting bid."
-        );
+        setFormError("Enter a starting bid.");
+        return;
       }
 
       if (!minimumIncrement) {
-        return alert(
-          "Enter the minimum increment."
-        );
+        setFormError("Enter the minimum increment.");
+        return;
       }
 
-      if (
-        !startDate ||
-        !endDate
-      ) {
-        return alert(
-          "Please select auction dates."
-        );
+      if (!startDate || !endDate) {
+        setFormError("Please select auction dates.");
+        return;
       }
 
       const now = new Date();
+      const selectedStartDate = new Date(startDate);
+      const selectedEndDate = new Date(endDate);
 
-      const selectedStartDate =
-        new Date(startDate);
-
-      const selectedEndDate =
-        new Date(endDate);
-
-      if (
-        selectedStartDate <= now
-      ) {
-        return alert(
-          "The auction start date must be in the future."
-        );
+      if (selectedStartDate <= now) {
+        setFormError("The auction start date must be in the future.");
+        return;
       }
 
-      if (
-        selectedEndDate <=
-        selectedStartDate
-      ) {
-        return alert(
-          "The end date must be after the start date."
-        );
+      if (selectedEndDate <= selectedStartDate) {
+        setFormError("The end date must be after the start date.");
+        return;
       }
 
       setLoading(true);
 
-      const res = await apiFetch(
-        "/api/auctions",
-        {
-          method: "POST",
+      const res = await apiFetch("/api/auctions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          auctionMode,
+          listingId:
+            auctionMode === "existing" ? Number(listingId) : null,
+          title: auctionMode === "new" ? title : null,
+          description: auctionMode === "new" ? description : null,
+          price: auctionMode === "new" ? Number(price) : null,
+          categoryId: auctionMode === "new" ? Number(categoryId) : null,
+          images: auctionMode === "new" ? imageUrls : [],
+          startingBid: Number(startingBid),
+          reservePrice: reservePrice ? Number(reservePrice) : null,
+          buyNowPrice: buyNowPrice ? Number(buyNowPrice) : null,
+          minimumIncrement: Number(minimumIncrement),
+          startDate,
+          endDate,
+          inspectionState,
+          inspectionCity,
+          inspectionAddress,
+          inspectionDate,
+          paymentTerms,
+          terms,
+        }),
+      });
 
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            auctionMode,
-
-            // Existing listing
-
-            listingId:
-              auctionMode === "existing"
-                ? Number(listingId)
-                : null,
-
-            // New listing
-
-            title:
-              auctionMode === "new"
-                ? title
-                : null,
-
-            description:
-              auctionMode === "new"
-                ? description
-                : null,
-
-            price:
-              auctionMode === "new"
-                ? Number(price)
-                : null,
-
-            categoryId:
-              auctionMode === "new"
-                ? Number(categoryId)
-                : null,
-
-            images:
-              auctionMode === "new"
-                ? imageUrls
-                : [],
-
-            // Auction
-
-            startingBid:
-              Number(startingBid),
-
-            reservePrice:
-              reservePrice
-                ? Number(reservePrice)
-                : null,
-
-            buyNowPrice:
-              buyNowPrice
-                ? Number(buyNowPrice)
-                : null,
-
-            minimumIncrement:
-              Number(
-                minimumIncrement
-              ),
-
-            startDate,
-
-            endDate,
-
-            // Inspection
-
-            inspectionState,
-
-            inspectionCity,
-
-            inspectionAddress,
-
-            inspectionDate,
-
-            // Terms
-
-            paymentTerms,
-
-            terms,
-          }),
-        }
-      );
-
-      const data =
-        await res.json();
+      const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(
-          data.message ||
-          "Failed to create auction"
-        );
+        throw new Error(data.message || "Failed to create auction");
       }
 
-      localStorage.removeItem(
-        DRAFT_KEY
-      );
+      localStorage.removeItem(DRAFT_KEY);
 
-      alert(
+      setFormSuccess(
         auctionMode === "new"
-          ? "Auction submitted for admin approval!"
-          : "Auction created successfully!"
+          ? "Auction submitted for admin approval."
+          : "Auction created successfully."
       );
 
-      window.location.href =
-        "/dashboard";
-
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 900);
     } catch (err: any) {
-      alert(
-        err.message ||
-        "Failed to create auction"
-      );
+      setFormError(err.message || "Failed to create auction");
     } finally {
       setLoading(false);
     }
@@ -625,6 +497,12 @@ export default function CreateAuctionPage() {
       {formError && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {formError}
+        </div>
+      )}
+
+      {formSuccess && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {formSuccess}
         </div>
       )}
 
@@ -966,14 +844,14 @@ export default function CreateAuctionPage() {
 
             {/* Save draft */}
 
-            <button
+            {/* <button
               type="button"
               onClick={saveDraft}
               disabled={loading}
               className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Save as Draft
-            </button>
+            </button> */}
 
             {/* Review & Submit */}
 

@@ -10,8 +10,8 @@ export default function FavoriteButton({
 }) {
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Load initial state
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token || !listingId) return;
@@ -43,12 +43,13 @@ export default function FavoriteButton({
         const token = localStorage.getItem("token");
 
         if (!token) {
-            alert("Please log in to save listings.");
+            setError("Please log in to save listings.");
             return;
         }
 
         try {
             setLoading(true);
+            setError(null);
 
             const res = await fetch(
                 `${API_BASE_URL}/api/favorites/${listingId}`,
@@ -66,24 +67,33 @@ export default function FavoriteButton({
                 throw new Error(data.message || "Failed to update favorite");
             }
 
-            setSaved(data.favorited);
+            setSaved(!!data.favorited);
         } catch (err: any) {
             console.error(err);
-            alert(err.message || "Something went wrong");
+            setError(err.message || "Something went wrong");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <button
-            onClick={handleFavorite}
-            disabled={loading}
-            className="mt-4 px-4 py-2 rounded transition text-2xl disabled:opacity-50"
-            title={saved ? "Remove from favorites" : "Add to favorites"}
-        >
-            {saved ? "❤️" : "🤍"}
-        </button>
+        <div className="inline-flex flex-col items-end">
+            <button
+                type="button"
+                onClick={handleFavorite}
+                disabled={loading}
+                className="rounded-lg px-2 py-1 text-2xl transition disabled:opacity-50"
+                title={saved ? "Remove from favorites" : "Add to favorites"}
+            >
+                {saved ? "❤️" : "🤍"}
+            </button>
+
+            {error && (
+                <p className="mt-1 max-w-[160px] text-right text-[10px] text-red-600">
+                    {error}
+                </p>
+            )}
+        </div>
     );
 }
 // "use client";

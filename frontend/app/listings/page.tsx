@@ -1,6 +1,8 @@
 import API_BASE_URL from "@/lib/api-config";
 import ListingsBrowser from "./ListingBrowser";
 
+export const dynamic = "force-dynamic";
+
 async function getListings() {
     try {
         const res = await fetch(
